@@ -7,9 +7,10 @@ class EvalBspTF(tf.keras.layers.Layer):
     def __init__(self, order, supp, **kwargs):
         super(EvalBspTF, self).__init__(**kwargs)
         self.order = order
-        self.supp = supp
+        self.supp = tf.cast(supp, dtype="float32")
 
     def call(self, input):
+        input = tf.cast(input, dtype="float32")
         y = tf.math.divide(tf.math.subtract(input, self.supp[0]), tf.math.subtract(self.supp[1], self.supp[0]))
         return(keras.layers.concatenate([tf.reshape(tf.divide(tfp.distributions.Beta(m + 1, self.order + 1 - m).prob(y), (self.order + 1)), (-1,1)) 
                                          for m in range(self.order+1)], axis = 1)
@@ -32,9 +33,10 @@ class EvalBspPrimeTF(tf.keras.layers.Layer):
     def __init__(self, order, supp, **kwargs):
         super(EvalBspPrimeTF, self).__init__(**kwargs)
         self.order = order
-        self.supp = supp
+        self.supp = tf.cast(supp, dtype="float32")
 
     def call(self, input):
+        input = tf.cast(input, dtype="float32")
         y = tf.math.divide(tf.math.subtract(input, self.supp[0]), tf.math.subtract(self.supp[1], self.supp[0]))
         return(keras.layers.concatenate([calc_first_second(m, y, self.order) for m in range(self.order+1)], axis = 1))
         
