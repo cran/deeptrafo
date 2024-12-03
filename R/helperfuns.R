@@ -15,21 +15,21 @@
 
 # Linear and log-linear bases ---------------------------------------------
 
-eval_lin <- function(y) {
+eval_lin <- function(y, suppy = NULL) {
   ret <- cbind(1, y)
   if (NROW(ret) == 1)
     return(as.vector(ret))
   ret
 }
 
-eval_lin_prime <- function(y) {
+eval_lin_prime <- function(y, suppy = NULL) {
   ret <- cbind(0, rep(1, length(y)))
   if (NROW(ret) == 1)
     return(as.vector(ret))
   ret
 }
 
-eval_loglin <- function(y) {
+eval_loglin <- function(y, suppy = NULL) {
   stopifnot(y > 0)
   ret <- cbind(1, log(y))
   if (NROW(ret) == 1)
@@ -37,7 +37,7 @@ eval_loglin <- function(y) {
   ret
 }
 
-eval_loglin_prime <- function(y) {
+eval_loglin_prime <- function(y, suppy = NULL) {
   stopifnot(y > 0)
   ret <- cbind(0, 1/y)
   if (NROW(ret) == 1)
@@ -163,7 +163,7 @@ eval_bsp_prime <- function(y, order = 3, supp = range(y)) {
 #' @importFrom reticulate import_from_path
 eval_bsp_tf <- function(order, supp, ...){
   python_path <- system.file("python", package = "deeptrafo")
-  layer <- import_from_path("layers", path = python_path)
+  layer <- import_from_path("dtlayers", path = python_path)
   return(layer$EvalBspTF(order = as.integer(order), supp = supp, ...))
 }
 
@@ -215,7 +215,7 @@ ar_lags_layer <- function(order, supp)
 
 eval_bsp_prime_tf <- function(order, supp, ...){
   python_path <- system.file("python", package = "deeptrafo")
-  layer <- reticulate::import_from_path("layers", path = python_path)
+  layer <- reticulate::import_from_path("dtlayers", path = python_path)
   return(layer$EvalBspPrimeTF(order = as.integer(order), supp = supp, ...))
 }
 
@@ -228,7 +228,7 @@ apply_atm_lags <- function(form)
 
 # TensorFlow repeat function which is not available for TF 2.0
 tf_repeat <- function(a, dim)
-  tf$reshape(tensor = tf$tile(tf$expand_dims(input = a, axis = -1L),  c(1L, 1L, dim)), 
+  tf$reshape(tensor = tf$tile(tf$expand_dims(input = a, axis = -1L),  c(1L, 1L, dim)),
              shape = list(-1L, a$shape[[2]]*dim))
 
 ###############################################################################################
@@ -282,7 +282,7 @@ MonoMultiLayer <- R6::R6Class("MonoMultiLayer",
                                 initialize = function(output_dim, dim_bsp,
                                                       # input_dim,
                                                       kernel_regularizer,
-                                                      initializer = initializer_random_normal(),
+                                                      initializer = initializer_random_normal(seed = 1L),
                                                       trafo = trafo)
                                 {
                                   self$output_dim <- output_dim
@@ -320,19 +320,59 @@ layer_mono_multi <- function(object,
                              name = "constraint_mono_layer_multi",
                              trainable = TRUE,
                              kernel_regularizer = NULL,
-                             trafo = mono_trafo_multi
+                             trafo = mono_trafo_multi,
+                             initializer = initializer_random_normal(seed = sample.int(1e4, 1))
 ) {
-  
+
   python_path <- system.file("python", package = "deeptrafo")
-  layers <- reticulate::import_from_path("layers", path = python_path)
-  return(layers$MonoMultiLayer(
-    name = name,
-    trainable = trainable,
-    output_dim = as.integer(units),
-    dim_bsp = as.integer(dim_bsp),
-    kernel_regularizer = kernel_regularizer,
-    trafo = trafo
-  ))
+  layers <- reticulate::import_from_path("dtlayers", path = python_path)
+  suppressWarnings(
+    layers$MonoMultiLayer(
+      name = name,
+      trainable = trainable,
+      output_dim = as.integer(units),
+      dim_bsp = as.integer(dim_bsp),
+      kernel_regularizer = kernel_regularizer,
+      trafo = trafo,
+      initializer = initializer
+    )
+  )
+}
+
+#' @importFrom data.table shift `:=` as.data.table
+#' @importFrom stats na.omit
+create_lags <- function(rvar,
+                        d_list,
+                        atplags = NULL,
+                        lags = NULL,
+                        pred_grid = FALSE
+) {
+
+  if (is.null(lags)) {
+    lags <- gsub("^atplag\\(|\\)$","",atplags)
+    lags <- eval(parse(text = paste0("c(", lags,")")))
+  }
+
+  lags_nms <- paste0(rvar,"_lag_", lags)
+  atplags <- paste0("atplag(", lags_nms, ")", collapse = "+")
+  d <- as.data.table(d_list) # shift() benchmarked with great performance
+
+  if (pred_grid) {
+    d[, (lags_nms) := shift(get(attr(pred_grid, "rname")), n = lags,
+                            type = "lag", fill = NA), by = get(attr(pred_grid, "y"))]
+  } else {
+    d[, (lags_nms) := shift(get(rvar), n = lags, type = "lag", fill = NA)]
+  }
+
+  return(list(data = as.list(na.omit(d)), fm = atplags))
+}
+
+fm_to_lag <- function(l_fm) {
+
+  # return lags (numeric) from lag_formula (string)
+
+  lags <- unlist(strsplit(l_fm, "\\+"))
+  as.numeric(gsub("\\D", "", lags))
 }
 
 layer_combined_mono <- function(object,
@@ -490,14 +530,14 @@ secondOrderPenBSP <- function(order_bsp, order_diff = 2)
 calculate_log_score <- function(x, output)
 {
 
-  if(is.character(x$init_params$base_distribution) &
-     x$init_params$base_distribution=="normal"){
+  if(is.character(x$init_params$latent_distr) &
+     x$init_params$latent_distr=="normal"){
     bd <- tfd_normal(loc = 0, scale = 1)
-  }else if((is.character(x$init_params$base_distribution) &
-            x$init_params$base_distribution=="logistic")){
+  }else if((is.character(x$init_params$latent_distr) &
+            x$init_params$latent_distr=="logistic")){
     bd <- tfd_logistic(loc = 0, scale = 1)
   }else{
-    bd <- x$init_params$base_distribution
+    bd <- x$init_params$latent_distr
   }
   return(
     as.matrix(bd %>% tfd_log_prob(output[,2,drop=F] + output[,1,drop=F])) +

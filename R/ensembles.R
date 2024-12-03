@@ -19,6 +19,8 @@
 #' @param callbacks List; callbacks used for fitting.
 #' @param save_fun Function; function to be applied to each member to be stored
 #'     in the final result.
+#' @param seed Numeric vector of length \code{n_ensemble}; seeds for model
+#'     initialization.
 #' @param ... Further arguments passed to \code{object$fit_fun}.
 #'
 #' @return Ensemble of \code{"deeptrafo"} models with list of training histories
@@ -32,7 +34,8 @@ ensemble.deeptrafo <- function(x, n_ensemble = 5, reinitialize = TRUE,
                                mylapply = lapply, verbose = FALSE, patience = 20,
                                plot = TRUE, print_members = TRUE, stop_if_nan = TRUE,
                                save_weights = TRUE, callbacks = list(),
-                               save_fun = NULL, ...) {
+                               save_fun = NULL, seed = seq_len(n_ensemble),
+                               ...) {
 
   ret <- ensemble.deepregression(
     x = x, n_ensemble = n_ensemble,
@@ -40,7 +43,7 @@ ensemble.deeptrafo <- function(x, n_ensemble = 5, reinitialize = TRUE,
     verbose = verbose, patience = patience,
     plot = plot, print_members = print_members,
     stop_if_nan = stop_if_nan, save_weights = save_weights,
-    callbacks = callbacks, save_fun = save_fun,
+    callbacks = callbacks, save_fun = save_fun, seed = seed,
     ... = ...
   )
 
@@ -147,10 +150,113 @@ plot.dtEnsemble <- function(
   q = NULL,
   ...
 ) {
-  .call_for_all_members(
+  pdat <- .call_for_all_members(
     x, plot.deeptrafo, which = which, type = type, which_param = which_param,
-    only_data = only_data, K = K, q = q, ... = ...
+    newdata = newdata, only_data = TRUE, K = K, q = q, ... = ...
   ) |> invisible()
+
+  if (only_data)
+    return(pdat)
+
+  type <- match.arg(type)
+  rname <- x$init_params$response_varname
+  rtype <- x$init_params$response_type
+
+  if (type == "smooth") {
+
+    pdat <- transpose(pdat)
+    terms <- names(pdat)
+
+    lapply(terms, \(term) {
+
+      pd <- pdat[[term]]
+      value <- pd[[1]]$value
+      peff <- do.call("cbind", lapply(pd, \(x) x$partial_effect))
+      matplot(sort(value), peff[order(value),], type = "b", pch = 1, main = term)
+    })
+
+  } else if (!is.null(newdata)) {
+    if (!is.null(newdata[[rname]])) {
+      y <- attr(pdat[[1]], "y")
+      preds <- do.call("cbind", pdat)
+      matplot(sort(y), preds[order(y),], type = "p")
+    } else {
+      y <- attr(pdat[[1]], "y")
+      preds <- do.call("rbind", pdat)
+      ttype <- ifelse(rtype %in% c("ordered", "count"), "s", "l")
+      print(ttype)
+      matplot(y, t(preds), type = ttype, lty = rep(
+        1:length(pdat), each = NROW(pdat[[1]])))
+    }
+  } else {
+    y <- attr(pdat[[1]], "y")
+    preds <- do.call("cbind", pdat)
+    matplot(sort(y), preds[order(y),], type = "p")
+  }
+
+  return(invisible(pdat))
+
+}
+
+#' Tune and evaluate weighted transformation ensembles
+#'
+#' @param object Object of class \code{"dtEnsemble"}
+#' @param weights Numeric; weight-vector of length \code{n_ensemble}, if
+#'     \code{NULL} the weights are tuned on \code{newdata}
+#' @param newdata List or data.frame; new data to evaluate or tune the weights
+#'     on
+#' @inheritParams logLik.deeptrafo
+#'
+#' @importFrom stats optim weighted.mean
+#'
+#' @return Returns list of ensemble members, average, and ensemble
+#'    log-likelihood converted by \code{convert_fun}
+#' @export
+#'
+weighted_logLik <- function(
+    object,
+    weights = NULL,
+    newdata = NULL,
+    convert_fun = function(x, ...) mean(x, ...),
+    batch_size = NULL,
+    ...
+) {
+
+  stopifnot(inherits(object, "dtEnsemble"))
+
+  indiv <- .call_for_all_members(
+    object, logLik.deeptrafo, newdata = newdata, y = y,
+    convert_fun = convert_fun, ... = ...
+  )
+
+  fitt <- fitted(object, newdata = newdata, batch_size = NULL)
+
+  if (is.null(newdata)) {
+    y <- object$init_params$y
+  } else {
+    y <- response(newdata[[object$init_params$response_varname]])
+  }
+
+  if (is.null(weights)) {
+    obj <- function(weights) {
+      y_pred <- apply(simplify2array(fitt), 1:2, weighted.mean, w = weights)
+      convert_fun(object$model$loss(y, y_pred)$numpy())
+    }
+    opt <- optim(rep(1, length(fitt)), obj, lower = .Machine$double.eps,
+                 upper = 1 - .Machine$double.eps, method = "L-BFGS-B")
+    ensemble_loss <- opt$value
+    weights <- opt$par
+    weights <- weights / sum(weights)
+  } else {
+    y_pred <- apply(simplify2array(fitt), 1:2, weighted.mean, w = weights)
+    ensemble_loss <- convert_fun(object$model$loss(y, y_pred)$numpy())
+  }
+
+  list(members = unlist(indiv),
+       mean = mean(unlist(indiv)),
+       ensemble = ensemble_loss,
+       weights = weights)
+
 }
 
 # Helpers
@@ -165,3 +271,4 @@ plot.dtEnsemble <- function(
     FUN(object, ... = ...)
   })
 }
+

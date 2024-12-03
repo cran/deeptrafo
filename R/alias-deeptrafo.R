@@ -12,10 +12,12 @@
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'    df <- data.frame(y = rnorm(50), x = rnorm(50))
 #'    m <- dctm(response = ~ y, shift = ~ 0 + x, data = df)
 #'    coef(m)
 #' }
@@ -40,6 +42,7 @@ dctm <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("dctm", class(ret))
 
   ret
@@ -63,12 +66,14 @@ dctm <- function(
 #'     Pattern Recognition, 122, 108263. DOI 10.1016/j.patcog.2021.108263
 #'
 #' @examples
-#' df <- data.frame(y = ordered(sample.int(6, 50, TRUE)), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = ordered(sample.int(6, 50, TRUE)), x = rnorm(50))
 #'     m <- ontram(response = ~ y, shift = ~ x, data = df)
-#'    coef(m)
+#'     coef(m)
 #' }
 #'
 #' @export
@@ -92,6 +97,7 @@ ontram <- function(
               monitor_metrics = monitor_metrics, trafo_options = trafo_options,
               ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("ontram", class(ret))
 
   ret
@@ -105,10 +111,12 @@ ontram <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = rnorm(50), x = rnorm(50))
 #'     m <- ColrNN(y ~ x, data = df)
 #'     coef(m)
 #' }
@@ -132,6 +140,7 @@ ColrNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("ColrNN", class(ret))
 
   ret
@@ -145,10 +154,12 @@ ColrNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = rnorm(50), x = rnorm(50))
 #'     m <- CoxphNN(y ~ x, data = df)
 #'     coef(m)
 #' }
@@ -172,6 +183,7 @@ CoxphNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("CoxphNN", class(ret))
 
   ret
@@ -185,10 +197,12 @@ CoxphNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = rnorm(50), x = rnorm(50))
 #'     m <- LehmanNN(y ~ 0 + x, data = df)
 #'     coef(m)
 #' }
@@ -212,6 +226,7 @@ LehmanNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("LehmanNN", class(ret))
 
   ret
@@ -225,10 +240,12 @@ LehmanNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = rnorm(50), x = rnorm(50))
 #'     m <- BoxCoxNN(y ~ x, data = df)
 #'     coef(m)
 #' }
@@ -252,6 +269,7 @@ BoxCoxNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("BoxCoxNN", class(ret))
 
   ret
@@ -265,11 +283,13 @@ BoxCoxNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' df <- data.frame(y = ordered(sample.int(5, 50, replace = TRUE)),
-#'      x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     df <- data.frame(y = ordered(sample.int(5, 50, replace = TRUE)),
+#'                      x = rnorm(50))
 #'     m <- PolrNN(y ~ x, data = df)
 #'     coef(m)
 #' }
@@ -293,6 +313,7 @@ PolrNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("PolrNN", class(ret))
 
   ret
@@ -306,11 +327,13 @@ PolrNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' set.seed(1)
-#' df <- data.frame(y = 10 + rnorm(50), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     set.seed(1)
+#'     df <- data.frame(y = 10 + rnorm(50), x = rnorm(50))
 #'     m <- LmNN(y ~ 0 + x, data = df)
 #' \donttest{
 #'     optimizer <- optimizer_adam(learning_rate = 0.01, decay = 4e-4)
@@ -347,6 +370,7 @@ LmNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("LmNN", class(ret))
 
   ret
@@ -360,11 +384,13 @@ LmNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' set.seed(1)
-#' df <- data.frame(y = abs(1 + rnorm(50)), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     set.seed(1)
+#'     df <- data.frame(y = abs(1 + rnorm(50)), x = rnorm(50))
 #'     m <- SurvregNN(y ~ 0 + x, data = df)
 #' \donttest{
 #'     optimizer <- optimizer_adam(learning_rate = 0.01, decay = 4e-4)
@@ -415,6 +441,7 @@ SurvregNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("SurvregNN", class(ret))
 
   ret
@@ -428,11 +455,13 @@ SurvregNN <- function(
 #' @return See return statement of \code{\link[deeptrafo]{deeptrafo}}
 #'
 #' @examples
-#' set.seed(1)
-#' df <- data.frame(y = as.integer(abs(1 + rnorm(50, sd = 10))), x = rnorm(50))
-#' if (reticulate::py_module_available("tensorflow") &
-#'     reticulate::py_module_available("keras") &
+#' if (.Platform$OS.type != "windows" &&
+#'     reticulate::py_available() &&
+#'     reticulate::py_module_available("tensorflow") &&
+#'     reticulate::py_module_available("keras") &&
 #'     reticulate::py_module_available("tensorflow_probability")) {
+#'     set.seed(1)
+#'     df <- data.frame(y = as.integer(abs(1 + rnorm(50, sd = 10))), x = rnorm(50))
 #'     m <- cotramNN(y ~ 0 + x, data = df, order = 6)
 #' \donttest{
 #'     optimizer <- optimizer_adam(learning_rate = 0.1, decay = 4e-4)
@@ -472,6 +501,7 @@ cotramNN <- function(
                    monitor_metrics = monitor_metrics, trafo_options = trafo_options,
                    ... = ...)
 
+  ret$init_params$call <- match.call()
   class(ret) <- c("cotramNN", class(ret))
 
   ret

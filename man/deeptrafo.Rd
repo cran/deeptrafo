@@ -11,9 +11,12 @@ deeptrafo(
   order = get_order(response_type, data[[all.vars(fml)[1]]]),
   addconst_interaction = 0,
   latent_distr = "logistic",
+  loss = "nll",
+  loss_args = NULL,
   monitor_metrics = NULL,
   trafo_options = trafo_control(order_bsp = order, response_type = response_type),
   return_data = FALSE,
+  engine = "tf",
   ...
 )
 }
@@ -46,6 +49,15 @@ term.}
 transformation models. If character, can be \code{"normal"}, \code{"logistic"},
 \code{"gumbel"} or \code{"gompertz"}.}
 
+\item{loss}{Character; specifies the loss function used. The default is
+\code{"nll"}, an internal function which takes \code{latent_distr} as an
+argument and returns a function with arguments \code{y_true} and
+\code{y_pred} to be given to the underlying 'keras' model. Custom loss
+functions can be supplied with the same structure, either as a character
+or function.}
+
+\item{loss_args}{Further additional arguments to \code{loss}.}
+
 \item{monitor_metrics}{See \code{\link[deepregression]{deepregression}}}
 
 \item{trafo_options}{Options for transformation models such as the basis
@@ -54,6 +66,8 @@ function used, see \code{\link[deeptrafo]{trafo_control}} for more details.}
 \item{return_data}{Include full data in the returned object. Defaults to
 \code{FALSE}. Set to \code{TRUE} if inteded to use
 \code{\link[stats]{simulate}} afterwards.}
+
+\item{engine}{Ignored; for compatibility with package \code{deepregression}.}
 
 \item{...}{Additional arguments passed to \code{deepregression}}
 }
@@ -71,35 +85,46 @@ Deep Conditional Transformation Models
     and add the suffix "NN" to the function name.
 }
 \examples{
-data("wine", package = "ordinal")
-wine$z <- rnorm(nrow(wine))
-wine$x <- rnorm(nrow(wine))
+if (.Platform$OS.type != "windows" &&
+  reticulate::py_available() &&
+  reticulate::py_module_available("tensorflow") &&
+  reticulate::py_module_available("keras") &&
+  reticulate::py_module_available("tensorflow_probability")) {
+  data("wine", package = "ordinal")
+  wine$z <- rnorm(nrow(wine))
+  wine$x <- rnorm(nrow(wine))
 
-nn <- \(x) x |>
+  nn <- \(x) x |>
     layer_dense(input_shape = 1L, units = 2L, activation = "relu") |>
     layer_dense(1L)
 
-fml <- rating ~ 0 + temp + contact + s(z, df = 3) + nn(x)
-if (reticulate::py_module_available("tensorflow") &
-    reticulate::py_module_available("keras") &
-    reticulate::py_module_available("tensorflow_probability")) {
-m <- deeptrafo(fml, wine, latent_distr = "logistic", monitor_metric = NULL,
-    return_data = TRUE, list_of_deep_models = list(nn = nn))
+  fml <- rating ~ 0 + temp + contact + s(z, df = 3) + nn(x)
 
-print(m)
+  m <- deeptrafo(fml, wine,
+    latent_distr = "logistic", monitor_metric = NULL,
+    return_data = TRUE, list_of_deep_models = list(nn = nn)
+  )
 
-    m \%>\% fit(epochs = 10, batch_size = nrow(wine))
-    coef(m, which_param = "interacting")
-    coef(m, which_param = "shifting")
-    fitted(m)
-    predict(m, type = "pdf")
-    predict(m, type = "pdf", newdata = wine[, -2])
-    logLik(m)
-    logLik(m, newdata = wine[1:10, ])
-    plot(m)
-    mcv <- cv(m, cv_folds = 3)
-    ens <- ensemble(m, n_ensemble = 3)
-    coef(ens)
+  print(m)
+
+  m \%>\% fit(epochs = 10, batch_size = nrow(wine))
+  coef(m, which_param = "interacting")
+  coef(m, which_param = "shifting")
+  fitted(m)
+  predict(m, type = "pdf")
+  predict(m, type = "pdf", newdata = wine[, -2])
+  logLik(m)
+  logLik(m, newdata = wine[1:10, ])
+  plot(m)
+  mcv <- cv(m, cv_folds = 3)
+  ens <- ensemble(m, n_ensemble = 3)
+  coef(ens)
 }
 
+}
+\references{
+Kook, L., Baumann, P. F., Dürr, O., Sick, B., & Rügamer, D.
+(2024). Estimating conditional distributions with neural networks using R
+package deeptrafo. Journal of Statistical Software.
+\doi{10.18637/jss.v111.i10}.
 }
